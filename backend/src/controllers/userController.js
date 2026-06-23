@@ -1,4 +1,5 @@
-// User & Authentication controllers will be implemented here step-by-step.
+import bcrypt from 'bcryptjs';
+import { findUserByEmailOrUsername, createUser } from '../models/userModel.js';
 
 /**
  * Register a new user
@@ -6,9 +7,9 @@
 export const registerUser = async (req, res, next) => {
   const { email, username, password, name } = req.body;
   try {
-    console.log('Incoming Register Request Payload:', { email, username, password: password ? '[HIDDEN]' : undefined, name });
+    console.log('Registering user:', { email, username, name });
 
-    // Step 2: Validate input fields
+    // 1. Validate required fields
     if (!email || !username || !password) {
       return res.status(400).json({
         success: false,
@@ -16,11 +17,32 @@ export const registerUser = async (req, res, next) => {
       });
     }
 
-    // Temporary response to verify step 1 & 2
-    res.status(200).json({
+    // 2. Check if a user with the same email or username already exists
+    const existingUser = await findUserByEmailOrUsername(email, username);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email or username already exists.'
+      });
+    }
+
+    // 3. Hash the password securely
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 4. Create and save user via our Model layer
+    const newUser = await createUser({
+      email,
+      username,
+      password: hashedPassword,
+      name
+    });
+
+    // 5. Send success response with created user details
+    res.status(201).json({
       success: true,
-      message: 'Step 1 & 2 successful! Inputs validated.',
-      data: { email, username, name }
+      message: 'User registered successfully!',
+      data: newUser
     });
   } catch (error) {
     next(error);
