@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
+
+// Import unified routes
+import apiRoutes from './routes.js';
 
 const app = express();
 
@@ -16,15 +21,41 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('combined'));
 }
 
+// Swagger configuration
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Chronicle API',
+      version: '1.0.0',
+      description: 'API documentation for Chronicle - A premium fullstack blog platform',
+    },
+    servers: [
+      {
+        url: 'http://localhost:5000',
+        description: 'Development server',
+      },
+    ],
+  },
+  apis: ['./src/routes.js', './src/controllers/*.js'],
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
 // Base Route / Health Check
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Welcome to the Chronicle API',
     version: '1.0.0',
-    status: 'Running'
+    status: 'Running',
+    docs: 'http://localhost:5000/api-docs'
   });
 });
+
+// API Routes
+app.use('/api/v1', apiRoutes);
 
 // 404 Route Not Found Handler
 app.use((req, res, next) => {
